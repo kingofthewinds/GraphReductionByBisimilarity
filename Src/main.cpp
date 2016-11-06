@@ -10,10 +10,9 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 	ClusterHandler cluster(new Cluster);
-	
 	BisimilarReduction br(cluster);
 	
 	
 	
-	cout << cluster->getNumberOfNodes() << " : " << cluster->getrankOfCurrentNode() << endl;
+	//cout << cluster->getNumberOfNodes() << " : " << cluster->getrankOfCurrentNode() << endl;
 }
