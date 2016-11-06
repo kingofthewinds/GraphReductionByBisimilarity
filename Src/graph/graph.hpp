@@ -1,7 +1,15 @@
 #ifndef GRAPH_PROTECT
 #define GRAPH_PROTECT
 
-#include "../types.hpp"
+typedef int nodeType;
+typedef char edgeType;
+typedef int blockType;
+typedef int graphSize;
+enum tags 
+{ 
+	OUT = 0, 
+	IN = 1
+};
 
 struct edge 
 {
@@ -10,11 +18,17 @@ struct edge
 	nodeType dest;
 };
 
-struct out
+struct Out
 {
 	nodeType source;
 	edgeType edge;
 	blockType destinationBlock;
+};	
+
+struct initOut
+{
+	Out out;
+	int clusterDestinationNode; 
 };	
 
 #endif
