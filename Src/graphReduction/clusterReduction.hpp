@@ -6,6 +6,7 @@
 #include "../types.hpp"
 #include "../graph/graph.hpp"
 #include <set>
+#include <algorithm>
 
 class BisimilarReduction
 {
