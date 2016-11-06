@@ -3,7 +3,6 @@
 
 #include "../cluster/cluster.hpp"
 #include <vector>
-#include "../types.hpp"
 #include "../graph/graph.hpp"
 #include <set>
 #include <algorithm>

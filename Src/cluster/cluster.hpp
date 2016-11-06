@@ -3,6 +3,7 @@
 
 #include <mpi.h>
 #include <stdexcept>
+#include "../graph/graph.hpp"
 
 
 class Cluster
@@ -11,6 +12,9 @@ class Cluster
 		Cluster();
 		int getNumberOfNodes(){return numberOfNodes;}
 		int getrankOfCurrentNode(){return rankOfCurrentNode;}
+		MPI_Request* send(int destination,tags tag, const void *buf,int count,MPI_Datatype datatype);
+		void waitForSend(MPI_Request *request);
+
 		
 	private : 
 		int numberOfNodes;
@@ -37,8 +41,6 @@ class ClusterHandler
 			throw std::runtime_error("cluster not initialized");
 		}
 
-
-	
 	private:
 		Cluster* cluster;
 		size_t* refptr;

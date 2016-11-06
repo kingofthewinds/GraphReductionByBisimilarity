@@ -1,6 +1,5 @@
 #include <iostream>
 #include "cluster/cluster.hpp"
-#include "types.hpp"
 #include "graph/graph.hpp"
 #include "graphReduction/clusterReduction.hpp"
 #include <vector>
