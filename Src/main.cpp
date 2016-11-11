@@ -1,7 +1,7 @@
 #include <iostream>
 #include "cluster/cluster.hpp"
 #include "graph/graph.hpp"
-#include "graphReduction/clusterReduction.hpp"
+#include "graphReduction/bisimilarGraphReducer.hpp"
 #include <vector>
 
 
@@ -9,9 +9,7 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 	ClusterHandler cluster(new Cluster);
-	BisimilarReduction br(cluster);
 	
-	
-	
+	BisimilarGraphReducer bgr(cluster,"Undefined");
 	//cout << cluster->getNumberOfNodes() << " : " << cluster->getrankOfCurrentNode() << endl;
 }

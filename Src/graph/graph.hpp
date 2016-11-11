@@ -8,7 +8,8 @@ typedef int graphSize;
 enum tags 
 { 
 	OUT = 0, 
-	IN = 1
+	IN = 1,
+	ENDOfGraphDistribution = 2
 };
 
 struct edge 
@@ -24,12 +25,25 @@ struct Out
 	nodeType source;
 	edgeType edge;
 	blockType destinationBlock;
+};
+
+struct In
+{
+	nodeType dest;
 };	
 
 struct initOut
 {
-	Out out;
+	nodeType source;
+	edgeType edge;
+	blockType destinationBlock;
 	int clusterDestinationNode; 
 };	
+
+struct initIn
+{
+	nodeType dest;
+	int clusterSourceNode;
+};
 
 #endif

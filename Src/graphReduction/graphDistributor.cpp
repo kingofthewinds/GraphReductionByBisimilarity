@@ -1,4 +1,4 @@
-#include "clusterReduction.hpp"
+#include "GraphDistributor.hpp"
 
 /////////////debugging purposes//////////////
 #include <iostream>
@@ -6,13 +6,13 @@
 
 using namespace std;
 
-void BisimilarReduction::reduceGraph()
+void GraphDistributor::reduceGraph(string path)
 {
 	if (cluster->getrankOfCurrentNode() == 0)
-		readAndDistributeGraph();
+		readAndDistributeGraph(path);
 	receiveGraphSegment();
 }
-void BisimilarReduction::readAndDistributeGraph()
+void GraphDistributor::readAndDistributeGraph(string pathToFile)
 {
 	cout << "root : " << endl;
 	//somehow load the graph in the format : source , lable of the edge , destination
@@ -38,6 +38,7 @@ void BisimilarReduction::readAndDistributeGraph()
 	graphSize npn = (ngn % ncn == 0 ? ngn/ncn : ngn/ncn+1); //#graph nodes per cluster node
 	
 	NonBlockingSendQueue<initOut*> outQueue(cluster,OUT,MPI_BYTE);
+	NonBlockingSendQueue<initIn*> inQueue(cluster,IN,MPI_BYTE);
 	for (iterator it = graph.begin() ; it != graph.end() ; it++)
 	{
 		//get source, lable and the destination of the edge
@@ -55,33 +56,57 @@ void BisimilarReduction::readAndDistributeGraph()
 		cout << "\t\tout indexes (i,j) are : " << i << " , " << j << endl;
 		
 		//todo : send an OUTij signal to i with (source, edge, 0)
-		initOut* o = new initOut;
-		o->out.source = source;
-		o->out.edge = edge;
-		o->out.destinationBlock = 0;
-		o->clusterDestinationNode = j;
-		outQueue.send(i,o,sizeof(o));
+		initOut* o = createInitOutStruct(source, edge, 0, j);
+		cout << "\t\t\t size : " << sizeof(initOut) << endl;
+		outQueue.send(i,o,sizeof(initOut));
 		 
 		//todo : send an INij to j with (dest)
+		initIn* in = createInitInStruct(dest, i);
+		inQueue.send(j,in,sizeof(initIn));
 	}
 	outQueue.waitAndFree();
+	inQueue.waitAndFree();
 	
 	
-	
+	for (int i = 0 ; i < cluster->getNumberOfNodes() ; i++)
+	{
+		cluster->send(i,ENDOfGraphDistribution, NULL,0,MPI_BYTE);
+	}
 }
-void BisimilarReduction::receiveGraphSegment()
+
+
+void GraphDistributor::receiveGraphSegment()
 {
-	while (1 == 1)
+	tags tag = OUT;
+	while (tag != ENDOfGraphDistribution)
 	{
 		int count;
 		int source;
-		int tag;
-		unsigned char* data = cluster->receive(MPI_BYTE, &count, &source, &tag);
+		unsigned char* data = cluster->receive(MPI_BYTE, &count, &source, (int *)&tag);
 		cout << cluster->getrankOfCurrentNode() << " : " << endl;
 		cout << "\t I received a message from " << source << " with tag : " << tag << endl; 
-		
 		initOut* o = (initOut*)data;
-		cout << "\t I got an Out with source : " << o->out.source << " dege : " << o->out.edge << " clusterDestinationNode : " << o->clusterDestinationNode <<  endl;
+		cout << "\t I got an Out with source : " << o->source << " dege : " << o->edge << " clusterDestinationNode : " << o->clusterDestinationNode << endl;
+		cout << "\t\t\tThe size i received is : " << count << endl;
 	}
 	
+}
+
+initOut* GraphDistributor::createInitOutStruct(nodeType source, edgeType edge, blockType destinationBlock, int clusterDestinationNode)
+{
+	initOut* out = new initOut;
+	out->source = source;
+	out->edge = edge;
+	out->destinationBlock = destinationBlock;
+	out->clusterDestinationNode = clusterDestinationNode;
+	return out;
+}
+
+
+initIn* GraphDistributor::createInitInStruct(nodeType dest, int clusterSourceNode)
+{
+	initIn* in = new initIn;
+	in->dest = dest;
+	in->clusterSourceNode = clusterSourceNode;
+	return in;
 }
