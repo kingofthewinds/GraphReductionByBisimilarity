@@ -37,9 +37,7 @@ void BisimilarReduction::readAndDistributeGraph()
 	
 	graphSize npn = (ngn % ncn == 0 ? ngn/ncn : ngn/ncn+1); //#graph nodes per cluster node
 	
-	
-	vector<MPI_Request*> sentRequests;
-	vector<initOut*> initOuts;
+	NonBlockingSendQueue<initOut*> outQueue(cluster,OUT,MPI_BYTE);
 	for (iterator it = graph.begin() ; it != graph.end() ; it++)
 	{
 		//get source, lable and the destination of the edge
@@ -61,21 +59,12 @@ void BisimilarReduction::readAndDistributeGraph()
 		o->out.source = source;
 		o->out.edge = edge;
 		o->out.destinationBlock = 0;
-		sentRequests.push_back(cluster->send(i,OUT, o,sizeof(o),MPI_BYTE));
-		initOuts.push_back(o);
+		o->clusterDestinationNode = j;
+		outQueue.send(i,o,sizeof(o));
 		 
 		//todo : send an INij to j with (dest)
-		
 	}
-	for (vector<MPI_Request*>::const_iterator it = sentRequests.begin(); it != sentRequests.end() ; it++)
-	{
-		cluster->waitForSend(*it);
-		delete *it;
-	}
-	for (vector<initOut*>::const_iterator it = initOuts.begin(); it != initOuts.end() ; it++)
-	{
-		delete *it;
-	}
+	outQueue.waitAndFree();
 	
 	
 	

@@ -4,6 +4,7 @@
 #include <mpi.h>
 #include <stdexcept>
 #include "../graph/graph.hpp"
+#include <vector>
 
 
 class Cluster
@@ -14,12 +15,12 @@ class Cluster
 		int getrankOfCurrentNode(){return rankOfCurrentNode;}
 		MPI_Request* send(int destination,tags tag, const void *buf,int count,MPI_Datatype datatype);
 		void waitForSend(MPI_Request *request);
-
 		
 	private : 
 		int numberOfNodes;
 		int rankOfCurrentNode;
 };
+
 
 class ClusterHandler
 {
@@ -45,6 +46,42 @@ class ClusterHandler
 		Cluster* cluster;
 		size_t* refptr;
 };
+
+template <class BufferType>
+class NonBlockingSendQueue 
+{
+	public :
+		NonBlockingSendQueue(ClusterHandler cl,tags t,MPI_Datatype dt) : cluster(cl), tag(t), datatype(dt) {}
+		void send(int destination,const BufferType message,int count);
+		void waitAndFree();
+	private :
+		std::vector<MPI_Request*> sentMessageHandlers;
+		std::vector<BufferType> sentMessages;
+		ClusterHandler cluster;
+		tags tag;
+		MPI_Datatype datatype;
+	
+};
+
+template <typename BufferType>
+void NonBlockingSendQueue<BufferType>::send(int destination,const BufferType message,int count)
+{
+	sentMessages.push_back(message);
+	sentMessageHandlers.push_back(cluster->send(destination,tag,(void *)message ,count,datatype));
+}
+
+template <typename BufferType>
+void NonBlockingSendQueue<BufferType>::waitAndFree()
+{
+	for (int i = 0; i < sentMessageHandlers.size() ; i++)
+	{
+		cluster->waitForSend(sentMessageHandlers[i]);
+		delete sentMessages[i];
+	}
+	sentMessages.clear();
+	sentMessageHandlers.clear();
+}
+
 
 #endif
 

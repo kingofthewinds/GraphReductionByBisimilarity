@@ -18,6 +18,7 @@ struct edge
 	nodeType dest;
 };
 
+
 struct Out
 {
 	nodeType source;
