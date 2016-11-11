@@ -10,11 +10,11 @@ void BisimilarReduction::reduceGraph()
 {
 	if (cluster->getrankOfCurrentNode() == 0)
 		readAndDistributeGraph();
-	else 
-		receiveGraphSegment();
+	receiveGraphSegment();
 }
 void BisimilarReduction::readAndDistributeGraph()
 {
+	cout << "root : " << endl;
 	//somehow load the graph in the format : source , lable of the edge , destination
 	vector<edge> graph;
 	graph.push_back(edge{0,'a',1});
@@ -44,7 +44,7 @@ void BisimilarReduction::readAndDistributeGraph()
 		nodeType source = it->source; 
 		edgeType edge = it->edge;
 		nodeType dest = it->dest;
-		cout << "checking for (source,edge,destination) : " << source << " , " << edge << " , " << dest << endl;
+		cout << "\tchecking for (source,edge,destination) : " << source << " , " << edge << " , " << dest << endl;
 		
 		//find out to which OUTij it belongs 
 		int i,j;
@@ -52,7 +52,7 @@ void BisimilarReduction::readAndDistributeGraph()
 		i = ((int)distance(nodes.begin(), pos))/npn;
 		pos = find(nodes.begin(),nodes.end(),dest);
 		j = ((int)distance(nodes.begin(), pos))/npn;
-		cout << "\tout indexes (i,j) are : " << i << " , " << j << endl;
+		cout << "\t\tout indexes (i,j) are : " << i << " , " << j << endl;
 		
 		//todo : send an OUTij signal to i with (source, edge, 0)
 		initOut* o = new initOut;
@@ -71,5 +71,17 @@ void BisimilarReduction::readAndDistributeGraph()
 }
 void BisimilarReduction::receiveGraphSegment()
 {
+	while (1 == 1)
+	{
+		int count;
+		int source;
+		int tag;
+		unsigned char* data = cluster->receive(MPI_BYTE, &count, &source, &tag);
+		cout << cluster->getrankOfCurrentNode() << " : " << endl;
+		cout << "\t I received a message from " << source << " with tag : " << tag << endl; 
+		
+		initOut* o = (initOut*)data;
+		cout << "\t I got an Out with source : " << o->out.source << " dege : " << o->out.edge << " clusterDestinationNode : " << o->clusterDestinationNode <<  endl;
+	}
 	
 }

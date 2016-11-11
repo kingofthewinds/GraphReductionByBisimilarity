@@ -15,6 +15,7 @@ class Cluster
 		int getrankOfCurrentNode(){return rankOfCurrentNode;}
 		MPI_Request* send(int destination,tags tag, const void *buf,int count,MPI_Datatype datatype);
 		void waitForSend(MPI_Request *request);
+		unsigned char* receive(MPI_Datatype datatype, int* count, int* source, int* tag);
 		
 	private : 
 		int numberOfNodes;
