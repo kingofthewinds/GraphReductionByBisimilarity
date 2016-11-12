@@ -32,6 +32,12 @@ struct In
 	nodeType dest;
 };	
 
+struct Signature
+{
+	edgeType a;
+	blockType p;
+};
+
 struct initOut
 {
 	nodeType source;

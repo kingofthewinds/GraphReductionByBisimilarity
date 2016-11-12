@@ -1,9 +1,19 @@
 #include "cluster.hpp"
 
+#include <iostream>
+using namespace std;
 
 Cluster::Cluster()
 {
-	MPI_Init(NULL,NULL);
+	//MPI_Init(NULL,NULL);
+	int provided;
+	MPI_Init_thread(NULL, NULL,MPI_THREAD_MULTIPLE, &provided);
+	if (provided != MPI_THREAD_MULTIPLE)
+	{
+		cout << "Error : Your MPI implementation doesn't allow multiple threads !" << endl;
+		exit(1);
+	}
+	
 	MPI_Comm_size(MPI_COMM_WORLD, &numberOfNodes);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rankOfCurrentNode);
 }
@@ -35,6 +45,11 @@ unsigned char* Cluster::receive(MPI_Datatype datatype, int* count, int* source, 
 	*tag = status.MPI_TAG;
 	MPI_Recv((void*)data, *count, datatype, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	return data;
+}
+
+void Cluster::waitForOtherClusterNodes()
+{
+	MPI_Barrier(MPI_COMM_WORLD);
 }
 
 ClusterHandler& ClusterHandler::operator=(const ClusterHandler& rhs)

@@ -57,7 +57,6 @@ void GraphDistributor::readAndDistributeGraph(string pathToFile)
 		
 		//todo : send an OUTij signal to i with (source, edge, 0)
 		initOut* o = createInitOutStruct(source, edge, 0, j);
-		cout << "\t\t\t size : " << sizeof(initOut) << endl;
 		outQueue.send(i,o,sizeof(initOut));
 		 
 		//todo : send an INij to j with (dest)
