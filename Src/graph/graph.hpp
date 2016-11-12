@@ -9,7 +9,7 @@ enum tags
 { 
 	OUT = 0, 
 	IN = 1,
-	ENDOfGraphDistribution = 2
+	END_OF_GRAPH_DISTRIBUTION = 2
 };
 
 struct edge 

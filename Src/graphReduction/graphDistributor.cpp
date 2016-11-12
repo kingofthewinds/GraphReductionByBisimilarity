@@ -70,7 +70,7 @@ void GraphDistributor::readAndDistributeGraph(string pathToFile)
 	
 	for (int i = 0 ; i < cluster->getNumberOfNodes() ; i++)
 	{
-		cluster->send(i,ENDOfGraphDistribution, NULL,0,MPI_BYTE);
+		cluster->send(i,END_OF_GRAPH_DISTRIBUTION, NULL,0,MPI_BYTE);
 	}
 }
 
@@ -78,16 +78,18 @@ void GraphDistributor::readAndDistributeGraph(string pathToFile)
 void GraphDistributor::receiveGraphSegment()
 {
 	tags tag = OUT;
-	while (tag != ENDOfGraphDistribution)
+	while (tag != END_OF_GRAPH_DISTRIBUTION)
 	{
 		int count;
 		int source;
 		unsigned char* data = cluster->receive(MPI_BYTE, &count, &source, (int *)&tag);
-		cout << cluster->getrankOfCurrentNode() << " : " << endl;
-		cout << "\t I received a message from " << source << " with tag : " << tag << endl; 
-		initOut* o = (initOut*)data;
-		cout << "\t I got an Out with source : " << o->source << " dege : " << o->edge << " clusterDestinationNode : " << o->clusterDestinationNode << endl;
-		cout << "\t\t\tThe size i received is : " << count << endl;
+		if (tag == OUT)
+		{
+			addOut((initOut*) data);
+		}else if (tag == IN)
+		{
+			addIn((initIn*) data);			
+		}
 	}
 	
 }
@@ -109,4 +111,29 @@ initIn* GraphDistributor::createInitInStruct(nodeType dest, int clusterSourceNod
 	in->dest = dest;
 	in->clusterSourceNode = clusterSourceNode;
 	return in;
+}
+
+void GraphDistributor::addOut(initOut* iI)
+{
+	Out* out = new Out;
+	out->source = iI->source;
+	out->edge = iI->edge;
+	out->destinationBlock = iI->destinationBlock;
+	int j = iI->clusterDestinationNode; 
+	
+	outij[j].push_back(out);
+	attributedNodes.insert(out->source);
+	delete iI;
+	
+}
+void GraphDistributor::addIn(initIn* iO)
+{
+	In* in = new In;
+	in->dest = iO->dest;
+	int clusterSourceNode = iO->clusterSourceNode;
+	
+	inij[clusterSourceNode].push_back(in);
+	attributedNodes.insert(in->dest);
+	delete iO;
+	
 }

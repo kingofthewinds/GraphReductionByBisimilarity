@@ -7,11 +7,18 @@
 #include <set>
 #include <algorithm>
 #include <string>
+#include <set>
 
 class GraphDistributor
 {
 	public : 
-		GraphDistributor(ClusterHandler& clusterHandler,std::string path) : cluster(clusterHandler){reduceGraph(path);}
+		GraphDistributor(ClusterHandler& clusterHandler,std::string path, 
+						std::vector< std::vector<Out*> >& out, 
+						std::vector< std::vector<In*>  >& in,
+						std::set<nodeType>& attributedNodesToClusterNode) : 
+						cluster(clusterHandler), outij(out),inij(in),
+						attributedNodes(attributedNodesToClusterNode)		
+						{reduceGraph(path);}
 		
 	private :
 		void reduceGraph(std::string path);
@@ -19,10 +26,13 @@ class GraphDistributor
 		void receiveGraphSegment();
 		initOut* createInitOutStruct(nodeType source, edgeType edge, blockType destinationBlock, int clusterDestinationNode);
 		initIn* createInitInStruct(nodeType dest, int clusterSourceNode);
+		void addOut(initOut* out);
+		void addIn(initIn* in);
 		
 		ClusterHandler cluster;
-		Out** outij;
-		In** inij;
+		std::vector< std::vector<Out*> >& outij; 
+		std::vector< std::vector<In*>  >& inij;
+		std::set<nodeType>& attributedNodes;
 };
 
 #endif 
