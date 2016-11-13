@@ -24,6 +24,12 @@ void GraphDistributor::readAndDistributeGraph(string pathToFile)
 	graph.push_back(edge{2,'a',4});
 	graph.push_back(edge{2,'b',3});
 	
+	graph.push_back(edge{4,'a',5});
+	graph.push_back(edge{3,'a',6});
+	
+	graph.push_back(edge{5,'b',7});
+	graph.push_back(edge{6,'b',7});
+	
 	//put all the distinct nodes in a set and count them
 	set<nodeType> nodes;
 	typedef vector<edge>::const_iterator iterator;

@@ -29,6 +29,7 @@ class BisimilarGraphReducer
 		static bool compareSignatureVector (const std::vector<Signature>* lhs,const std::vector<Signature>* rhs);
 		void clearPartialHashTable();
 		void updateIDs();
+		void printIDs();
 		//variables : 
 		ClusterHandler cluster;
 		std::vector< std::vector<Out*> > out; 

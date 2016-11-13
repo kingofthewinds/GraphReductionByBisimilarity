@@ -12,7 +12,8 @@ enum tags
 	END_OF_GRAPH_DISTRIBUTION = 2,
 	HASH_INSERT = 3,
 	END_SIG = 4,
-	HASH_ID = 5
+	HASH_ID = 5,
+	UPDATE = 6
 };
 
 struct edge 

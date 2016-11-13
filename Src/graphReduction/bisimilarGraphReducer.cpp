@@ -25,9 +25,7 @@ void BisimilarGraphReducer::runAlgorithm()
 {
 	int newCount = 1;
 	
-	//this should be an infinite while loop, it's a For loop for debugging purposes
-	//don't forget to clear some vectors before each iteration ! 
-	for (int i = 0 ; i < 1 ; i++)
+	while(true)
 	{
 		for (int count = 0 ; count < s.size() ; count++)
 		{
@@ -44,8 +42,11 @@ void BisimilarGraphReducer::runAlgorithm()
 		{
 			break;
 		}
+		cluster->waitForOtherClusterNodes();
 		updateIDs();
+		cluster->waitForOtherClusterNodes();
 	}
+	printIDs();
 }
 
 void BisimilarGraphReducer::printOutVector()
@@ -276,10 +277,50 @@ void BisimilarGraphReducer::clearPartialHashTable()
 
 void BisimilarGraphReducer::updateIDs()
 {
-	//todo : update the ID's
+	NonBlockingSendQueue< blockType* > inSendQueue(cluster,UPDATE,MPI_BYTE);
+	for (int j = 0 ; j < cluster->getNumberOfNodes() ; j++)
+	{
+		vector<In*> inj = in[j];
+		vector<blockType>* toBeSent = new vector<blockType>;
+		for (auto in : inj)
+		{
+			int pos = find(s.begin(), s.end(), (*in).dest ) - s.begin();
+			toBeSent->push_back(ID[pos]);
+		} 
+		inSendQueue.send(j,(*toBeSent).data(),((*toBeSent).size())*sizeof(blockType));
+	}
+	
+	int received = 0;
+	while (received < cluster->getNumberOfNodes())
+	{
+		tags tag = OUT;
+		int count = 0;
+		int source = 0;
+		unsigned char* data = cluster->receive(MPI_BYTE, &count, &source, (int *)&tag);
+		if (tag == UPDATE)
+		{
+			blockType* newBlockNames = (blockType*)data;
+			
+			vector<Out*>& outij = out[source];
+			for (int i = 0 ; i < outij.size() ; i++)
+			{
+				outij[i]->destinationBlock = newBlockNames[i];
+			} 
+			
+			delete newBlockNames;
+			received ++;	
+		}
+	}
+	inSendQueue.waitAndFree();
 }
 
-
+void BisimilarGraphReducer::printIDs()
+{
+	for (int i = 0 ; i < s.size() ; i++)
+	{
+		cout << s[i] << " --> " << ID[i] << endl;
+	}
+}
 
 
 
