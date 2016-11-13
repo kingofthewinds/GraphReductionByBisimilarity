@@ -43,7 +43,7 @@ unsigned char* Cluster::receive(MPI_Datatype datatype, int* count, int* source, 
 	unsigned char* data = new unsigned char[*count];
 	*source = status.MPI_SOURCE;
 	*tag = status.MPI_TAG;
-	MPI_Recv((void*)data, *count, datatype, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	MPI_Recv((void*)data, *count, datatype, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	return data;
 }
 

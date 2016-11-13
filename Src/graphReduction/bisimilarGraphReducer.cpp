@@ -6,7 +6,7 @@ BisimilarGraphReducer::BisimilarGraphReducer(ClusterHandler& clusterHandler,std:
 	cluster(clusterHandler),
 	out(clusterHandler->getNumberOfNodes()), 
 	in(clusterHandler->getNumberOfNodes()),
-	s()
+	s(), H(BisimilarGraphReducer::compareSignatureVector) 
 {
 	std::set<nodeType> tempSet;
 	GraphDistributor gd(cluster,path,out,in,tempSet);
@@ -15,6 +15,8 @@ BisimilarGraphReducer::BisimilarGraphReducer(ClusterHandler& clusterHandler,std:
 		s.push_back(*i);
 	}
 	signatures.resize(s.size());
+	ID.resize(s.size());
+	for (auto id : ID) id = 0;
 	cluster->waitForOtherClusterNodes();
 	runAlgorithm();
 }
@@ -24,15 +26,22 @@ void BisimilarGraphReducer::runAlgorithm()
 	int newCount = 1;
 	
 	//this should be an infinite while loop, it's a For loop for debugging purposes
+	//don't forget to clear some vectors before each iteration ! 
 	for (int i = 0 ; i < 1 ; i++)
 	{
 		for (int count = 0 ; count < s.size() ; count++)
 		{
 			vector<Signature>* sig = generateSignature(s[count]);
+			delete signatures[count];
 			signatures[count] = sig;
 		}
 		numberOfExpectedAnswers = 0;
 		createThreadToSendSignaturesAndHandleMessages();
+		int oldCount = newCount;
+		cluster->waitForOtherClusterNodes();
+		
+		
+		
 	}
 }
 
@@ -70,7 +79,7 @@ void BisimilarGraphReducer::printAttributedNodes()
 	}
 }
 
-bool compareSignature (const Signature& lhs, const Signature& rhs) 
+bool BisimilarGraphReducer::compareSignature (const Signature& lhs, const Signature& rhs) 
 {
 	if (lhs.a < rhs.a)
 	{
@@ -87,7 +96,7 @@ std::vector<Signature>* BisimilarGraphReducer::generateSignature(nodeType node)
 {
 	vector<Signature>* signature = new vector<Signature>;
 	
-	bool(*sigCmp)(const Signature&,const Signature&) = compareSignature;
+	bool(*sigCmp)(const Signature&,const Signature&) = BisimilarGraphReducer::compareSignature;
 	std::set<Signature,bool(*)(const Signature&,const Signature&)> sigSet (sigCmp);
 	
 	//compute signature 
@@ -124,7 +133,8 @@ void* sendSignaturesThreadFunction(void* arg)
 }
 
 void BisimilarGraphReducer::createThreadToSendSignaturesAndHandleMessages()
-{
+{	
+	numberOfExpectedAnswers = signatures.size();
 	pthread_t sendSignatureThread;
 	pthread_create(&sendSignatureThread, NULL, sendSignaturesThreadFunction, (void*)this);
 	
@@ -137,14 +147,13 @@ void BisimilarGraphReducer::createThreadToSendSignaturesAndHandleMessages()
 
 void BisimilarGraphReducer::sendSignatures()
 {
-	NonBlockingSendQueue< vector<Signature>* > signaturesQueue(cluster,HASH_INSERT,MPI_BYTE);
+	NonBlockingSendQueue< Signature* > signaturesQueue(cluster,HASH_INSERT,MPI_BYTE);
+	
 	for (vector<Signature>* sig : signatures)
 	{
 		int clusterToSendTo = hashSignature(*sig);
-		signaturesQueue.send(clusterToSendTo,sig,sizeof(*sig));
-		
-		//todo : add mutexes around the following line! 
-		numberOfExpectedAnswers++;
+		vector<Signature>* copySignature = new vector<Signature>((*sig).data(),(*sig).data()+(*sig).size());//otherwise sendqueue deletes it!
+		signaturesQueue.send(clusterToSendTo,(*copySignature).data(),((*sig).size())*sizeof(Signature));
 	}
 	signaturesQueue.waitAndFree();
 	cluster->sendSignalToAllClusterNodes(END_SIG);
@@ -160,8 +169,114 @@ int BisimilarGraphReducer::hashSignature(vector<Signature>& signature)
 	return (hash % (cluster->getNumberOfNodes()));
 }
 
-void BisimilarGraphReducer::handleMessages()
+
+bool BisimilarGraphReducer::compareSignatureVector (const std::vector<Signature>* lhs,const std::vector<Signature>* rhs)
 {
-	//todo 
-	//don't forget to use mutexes !
+	const std::vector<Signature>& leftVec = (*lhs);
+	const std::vector<Signature>& rightVec = (*rhs);
+	int minSize = min(leftVec.size() , rightVec.size());
+	for (int i = 0 ; i < minSize ; i++)
+	{
+		Signature left = leftVec[i];
+		Signature right = rightVec[i];
+		if (left.a < right.a)
+		{
+			return true;
+		}
+		if (left.a == right.a)
+		{
+			if (left.p < right.p)
+			{
+				return true;
+			}
+			if (left.p == right.p)
+			{
+				continue;
+			}
+			return false;
+		}
+		return false;
+	}
+	return leftVec.size() < rightVec.size();
 }
+
+void BisimilarGraphReducer::handleMessages()
+{ 
+	clearPartialHashTable();
+	int numberOfActiveWorkers = cluster->getNumberOfNodes();
+	int currentNumberOfBlocks = 0*100+cluster->getrankOfCurrentNode(); //assuming we won't have a cluster of more than 100 nodes!
+	NonBlockingSendQueue< Signature* > idResponseQueue(cluster,HASH_ID,MPI_BYTE);
+	while (numberOfActiveWorkers > 0 || numberOfExpectedAnswers > 0)
+	{
+		tags tag = OUT;
+		int count = 0;
+		int source = 0;
+		unsigned char* data = cluster->receive(MPI_BYTE, &count, &source, (int *)&tag);
+		if (tag == HASH_INSERT)
+		{
+			int blockNumberToReturnToTheSender = 0;
+			Signature* sigs = (Signature*)data;
+			//insert into hash map
+			vector<Signature>* signatureToInsert = new vector<Signature>(sigs,sigs+count/(sizeof(Signature)));
+			std::pair<std::map<std::vector<Signature>*,int>::iterator , bool> ret;
+			ret = H.insert( std::pair<std::vector<Signature>*,int>(signatureToInsert,currentNumberOfBlocks) );
+			if (ret.second == false) //signature already existed
+			{
+				blockNumberToReturnToTheSender = ret.first->second;
+			}else
+			{
+				blockNumberToReturnToTheSender = currentNumberOfBlocks;
+				currentNumberOfBlocks += 100;
+			}
+			//return id (returned as the "p" element of the last element of the vector!)
+			vector<Signature>* signatureToSendBack = new vector<Signature>(sigs,sigs+count/(sizeof(Signature)));
+			signatureToSendBack->push_back( (struct Signature){'n',blockNumberToReturnToTheSender} );
+			idResponseQueue.send(source,(*signatureToSendBack).data(),((*signatureToSendBack).size())*sizeof(Signature));
+			delete data;			
+		}else if (tag == END_SIG)
+		{
+			numberOfActiveWorkers--;
+		}else if (tag == HASH_ID)
+		{
+			Signature* sigs = (Signature*)data;
+			vector<Signature>* signatureToInsert = new vector<Signature>(sigs,sigs+count/(sizeof(Signature)));
+			blockType newID = ((*signatureToInsert)[(*signatureToInsert).size()-1]).p;
+			signatureToInsert->pop_back();
+			for (int i = 0 ; i < signatures.size() ; i++)
+			{
+				
+				if ( 
+					BisimilarGraphReducer::compareSignatureVector(signatures[i],signatureToInsert)
+					==
+					BisimilarGraphReducer::compareSignatureVector(signatureToInsert,signatures[i])  
+				)
+				{
+					ID[i] = newID;
+				}
+			}
+			delete signatureToInsert;
+			numberOfExpectedAnswers--;
+		}
+	}
+	idResponseQueue.waitAndFree();
+	myNewCount = H.size();
+}
+
+void BisimilarGraphReducer::clearPartialHashTable()
+{
+	H.clear();
+	for (map<vector<Signature>*,int>::iterator it = H.begin(); it != H.end(); ++it)
+	{
+		delete it->first;
+	}
+}
+
+
+
+
+
+
+
+
+
+
