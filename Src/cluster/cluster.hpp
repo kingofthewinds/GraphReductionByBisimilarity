@@ -17,6 +17,7 @@ class Cluster
 		void waitForSend(MPI_Request *request);
 		unsigned char* receive(MPI_Datatype datatype, int* count, int* source, int* tag);
 		void waitForOtherClusterNodes();
+		void sendSignalToAllClusterNodes(tags t);
 		
 	private : 
 		int numberOfNodes;

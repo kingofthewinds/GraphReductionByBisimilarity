@@ -52,6 +52,19 @@ void Cluster::waitForOtherClusterNodes()
 	MPI_Barrier(MPI_COMM_WORLD);
 }
 
+void Cluster::sendSignalToAllClusterNodes(tags t)
+{
+	vector<MPI_Request*> sentSignals;
+	for (int i = 0 ; i < getNumberOfNodes() ; i++)
+	{
+		sentSignals.push_back(send(i,t, NULL,0,MPI_BYTE));
+	}
+	for (int i = 0; i < sentSignals.size() ; i++)
+	{
+		waitForSend(sentSignals[i]);
+	}
+}
+
 ClusterHandler& ClusterHandler::operator=(const ClusterHandler& rhs)
 {
 	++*rhs.refptr;

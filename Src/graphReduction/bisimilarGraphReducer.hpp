@@ -22,6 +22,7 @@ class BisimilarGraphReducer
 		void runAlgorithm();
 		std::vector<Signature>* generateSignature(nodeType node);
 		void createThreadToSendSignaturesAndHandleMessages();
+		int hashSignature(std::vector<Signature>& signature);
 		//variables : 
 		ClusterHandler cluster;
 		std::vector< std::vector<Out*> > out; 

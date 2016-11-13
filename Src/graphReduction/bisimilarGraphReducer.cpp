@@ -97,6 +97,7 @@ std::vector<Signature>* BisimilarGraphReducer::generateSignature(nodeType node)
 		{
 			if (o->source == node)
 			{
+				//todo : somewhere here delete the contents of the last signature residing in vector
 				sigSet.insert((struct Signature){o->edge,o->destinationBlock});
 			}
 		}
@@ -136,8 +137,27 @@ void BisimilarGraphReducer::createThreadToSendSignaturesAndHandleMessages()
 
 void BisimilarGraphReducer::sendSignatures()
 {
-	//todo 
-	//don't forget to use mutexes !
+	NonBlockingSendQueue< vector<Signature>* > signaturesQueue(cluster,HASH_INSERT,MPI_BYTE);
+	for (vector<Signature>* sig : signatures)
+	{
+		int clusterToSendTo = hashSignature(*sig);
+		signaturesQueue.send(clusterToSendTo,sig,sizeof(*sig));
+		
+		//todo : add mutexes around the following line! 
+		numberOfExpectedAnswers++;
+	}
+	signaturesQueue.waitAndFree();
+	cluster->sendSignalToAllClusterNodes(END_SIG);
+}
+
+int BisimilarGraphReducer::hashSignature(vector<Signature>& signature)
+{
+	int hash = 0;
+	for (auto sig : signature)
+	{
+		hash += (int)(sig.a) + (int)(sig.p);
+	}
+	return (hash % (cluster->getNumberOfNodes()));
 }
 
 void BisimilarGraphReducer::handleMessages()

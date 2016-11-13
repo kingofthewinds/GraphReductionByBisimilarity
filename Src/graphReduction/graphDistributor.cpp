@@ -66,11 +66,7 @@ void GraphDistributor::readAndDistributeGraph(string pathToFile)
 	outQueue.waitAndFree();
 	inQueue.waitAndFree();
 	
-	
-	for (int i = 0 ; i < cluster->getNumberOfNodes() ; i++)
-	{
-		cluster->send(i,END_OF_GRAPH_DISTRIBUTION, NULL,0,MPI_BYTE);
-	}
+	cluster->sendSignalToAllClusterNodes(END_OF_GRAPH_DISTRIBUTION);
 }
 
 
