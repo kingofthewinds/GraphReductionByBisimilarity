@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/nasa/europa.svg?branch=master)](https://travis-ci.org/nasa/europa)
-[![Latest Stable Version](https://poser.pugx.org/simkimsia/utility_behaviors/v/stable.png)](https://packagist.org/packages/simkimsia/utility_behaviors)
+[![Latest Stable Version](https://poser.pugx.org/phpunit/phpunit/version)](https://packagist.org/packages/phpunit/phpunit)
 
 # Introduction
 
