@@ -18,7 +18,7 @@ class Cluster
 		unsigned char* receive(MPI_Datatype datatype, int* count, int* source, int* tag);
 		void waitForOtherClusterNodes();
 		void sendSignalToAllClusterNodes(tags t);
-		
+		int sumAllClusterNodeValues(int myValue);
 	private : 
 		int numberOfNodes;
 		int rankOfCurrentNode;

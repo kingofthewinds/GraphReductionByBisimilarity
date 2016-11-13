@@ -39,9 +39,12 @@ void BisimilarGraphReducer::runAlgorithm()
 		createThreadToSendSignaturesAndHandleMessages();
 		int oldCount = newCount;
 		cluster->waitForOtherClusterNodes();
-		
-		
-		
+		newCount = cluster->sumAllClusterNodeValues(myNewCount);
+		if (oldCount == newCount)
+		{
+			break;
+		}
+		updateIDs();
 	}
 }
 
@@ -269,6 +272,11 @@ void BisimilarGraphReducer::clearPartialHashTable()
 	{
 		delete it->first;
 	}
+}
+
+void BisimilarGraphReducer::updateIDs()
+{
+	//todo : update the ID's
 }
 
 

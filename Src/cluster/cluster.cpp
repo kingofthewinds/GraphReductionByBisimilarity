@@ -65,6 +65,18 @@ void Cluster::sendSignalToAllClusterNodes(tags t)
 	}
 }
 
+int Cluster::sumAllClusterNodeValues(int myValue)
+{
+	int sum = 0;
+	int* receivedValues = new int[getNumberOfNodes()] ;
+	MPI_Allgather( &myValue, 1, MPI_INT, receivedValues, 1 , MPI_INT, MPI_COMM_WORLD);
+	for (int i = 0 ; i < getNumberOfNodes() ; i++)
+	{
+		sum += receivedValues[i];
+	}
+	return sum;
+}
+
 ClusterHandler& ClusterHandler::operator=(const ClusterHandler& rhs)
 {
 	++*rhs.refptr;
