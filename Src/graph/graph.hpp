@@ -5,16 +5,6 @@ typedef int nodeType;
 typedef char edgeType;
 typedef int blockType;
 typedef int graphSize;
-enum tags 
-{ 
-	OUT = 0, 
-	IN = 1,
-	END_OF_GRAPH_DISTRIBUTION = 2,
-	HASH_INSERT = 3,
-	END_SIG = 4,
-	HASH_ID = 5,
-	UPDATE = 6
-};
 
 struct edge 
 {
