@@ -148,7 +148,7 @@ class NonBlockingSendQueue
 			@param t the tag of all the message that will be sent using this object 
 			@param dt datatype of all the messages that will be sent using this object 
 		*/
-		NonBlockingSendQueue(ClusterHandler cl,tags t,MPI_Datatype dt) : cluster(cl), tag(t), datatype(dt) {}
+		NonBlockingSendQueue(ClusterHandler cl,tags t) : cluster(cl), tag(t) {}
 		/**
 			send the message (non blocking)
 			
@@ -158,27 +158,34 @@ class NonBlockingSendQueue
 			@param count the number of datatype(defined in the constructor) elements to be sent 
 		*/
 		void send(int destination,const BufferType message,int count);
+		void sendVector(int destination,std::vector<BufferType>* message,int count);
 		/**
 			blocking call thta waits for all the sent messages to finish and also 
 			deletes the buffer associated with them 
 			warning : the sent elements have to have been instantiated using the new keyword ! 
-			-------------bug------------>>>>> the right objects are not necessarily deleted --> to be fixed
 		*/
 		void waitAndFree();
+		void waitAndFreeVector();
 	private :
 		std::vector<MPI_Request*> sentMessageHandlers;
 		std::vector<BufferType> sentMessages;
+		std::vector<std::vector<BufferType>* > sentVectors;
 		ClusterHandler cluster;
-		tags tag;
-		MPI_Datatype datatype;
-	
+		tags tag;	
 };
 
 template <typename BufferType>
 void NonBlockingSendQueue<BufferType>::send(int destination,const BufferType message,int count)
 {
 	sentMessages.push_back(message);
-	sentMessageHandlers.push_back(cluster->send(destination,tag,(void *)message ,count,datatype));
+	sentMessageHandlers.push_back(cluster->send(destination,tag,(void *)message ,count,MPI_BYTE));
+}
+
+template <typename BufferType>
+void NonBlockingSendQueue<BufferType>::sendVector(int destination,std::vector<BufferType>* message,int count)
+{
+	sentVectors.push_back(message);
+	sentMessageHandlers.push_back(cluster->send(destination,tag,message->data(),count,MPI_BYTE));
 }
 
 template <typename BufferType>
@@ -191,6 +198,25 @@ void NonBlockingSendQueue<BufferType>::waitAndFree()
 	}
 	sentMessages.clear();
 	sentMessageHandlers.clear();
+}
+
+template <typename BufferType>
+void NonBlockingSendQueue<BufferType>::waitAndFreeVector()
+{
+	for (int i = 0; i < sentMessageHandlers.size() ; i++)
+	{
+		cluster->waitForSend(sentMessageHandlers[i]);
+		
+		for (BufferType atom : (*sentVectors[i]))
+		{
+			delete atom;
+		}
+		sentVectors[i]->clear();
+		delete sentVectors[i];
+	}
+	sentVectors.clear();
+	sentMessageHandlers.clear();
+	
 }
 
 

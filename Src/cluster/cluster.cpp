@@ -5,7 +5,6 @@ using namespace std;
 
 Cluster::Cluster()
 {
-	//MPI_Init(NULL,NULL);
 	int provided;
 	MPI_Init_thread(NULL, NULL,MPI_THREAD_MULTIPLE, &provided);
 	if (provided != MPI_THREAD_MULTIPLE)

@@ -4,20 +4,25 @@ using namespace std;
 
 BisimilarGraphReducer::BisimilarGraphReducer(ClusterHandler& clusterHandler,std::string path):
 	cluster(clusterHandler),
+	//initialize the sizes of out and in vectors to the number of cluster nodes 
 	out(clusterHandler->getNumberOfNodes()), 
 	in(clusterHandler->getNumberOfNodes()),
 	s(), H(BisimilarGraphReducer::compareSignatureVector) 
 {
-	std::set<nodeType> tempSet;
-	GraphDistributor gd(cluster,path,out,in,tempSet);
+	std::set<nodeType> tempSet;//create a tempporary set to pass to the graph distributor 
+	GraphDistributor gd(cluster,path,out,in,tempSet); // distribute the graph 
+	//convert the temporary set to a vector because we need it's values elements not to change position anymore
+	//under any more circomstances and it is guaranteed by vectors : 
 	for (set<nodeType>::const_iterator i = tempSet.begin() ; i != tempSet.end() ; i++) 
 	{
 		s.push_back(*i);
 	}
+	
+	//set the size the signatures vector (it will keep a signature per node attributed to cluster node)
 	signatures.resize(s.size());
-	ID.resize(s.size());
-	for (auto id : ID) id = 0;
-	cluster->waitForOtherClusterNodes();
+	ID.resize(s.size());//same for the ID's vector 
+	for (auto id : ID) id = 0;//set the initial id's to zero 
+	cluster->waitForOtherClusterNodes();//we wait for all nodes to get here before running the algorithm
 	runAlgorithm();
 }
 
@@ -151,7 +156,7 @@ void BisimilarGraphReducer::createThreadToSendSignaturesAndHandleMessages()
 
 void BisimilarGraphReducer::sendSignatures()
 {
-	NonBlockingSendQueue< Signature* > signaturesQueue(cluster,HASH_INSERT,MPI_BYTE);
+	NonBlockingSendQueue< Signature* > signaturesQueue(cluster,HASH_INSERT);
 	
 	for (vector<Signature>* sig : signatures)
 	{
@@ -209,7 +214,7 @@ void BisimilarGraphReducer::handleMessages()
 	clearPartialHashTable();
 	int numberOfActiveWorkers = cluster->getNumberOfNodes();
 	int currentNumberOfBlocks = 0*100+cluster->getrankOfCurrentNode(); //assuming we won't have a cluster of more than 100 nodes!
-	NonBlockingSendQueue< Signature* > idResponseQueue(cluster,HASH_ID,MPI_BYTE);
+	NonBlockingSendQueue< Signature* > idResponseQueue(cluster,HASH_ID);
 	while (numberOfActiveWorkers > 0 || numberOfExpectedAnswers > 0)
 	{
 		tags tag = OUT;
@@ -277,7 +282,7 @@ void BisimilarGraphReducer::clearPartialHashTable()
 
 void BisimilarGraphReducer::updateIDs()
 {
-	NonBlockingSendQueue< blockType* > inSendQueue(cluster,UPDATE,MPI_BYTE);
+	NonBlockingSendQueue< blockType* > inSendQueue(cluster,UPDATE);
 	for (int j = 0 ; j < cluster->getNumberOfNodes() ; j++)
 	{
 		vector<In*> inj = in[j];
