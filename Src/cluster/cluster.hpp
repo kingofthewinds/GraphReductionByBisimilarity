@@ -158,7 +158,7 @@ class NonBlockingSendQueue
 			@param count the number of datatype(defined in the constructor) elements to be sent 
 		*/
 		void send(int destination,const BufferType message,int count);
-		void sendVector(int destination,std::vector<BufferType>* message,int count);
+		void sendVector(int destination,std::vector<BufferType>* message,int count,bool eraseWhenSent);
 		/**
 			blocking call thta waits for all the sent messages to finish and also 
 			deletes the buffer associated with them 
@@ -182,9 +182,13 @@ void NonBlockingSendQueue<BufferType>::send(int destination,const BufferType mes
 }
 
 template <typename BufferType>
-void NonBlockingSendQueue<BufferType>::sendVector(int destination,std::vector<BufferType>* message,int count)
+void NonBlockingSendQueue<BufferType>::sendVector(	int destination,std::vector<BufferType>* message,
+													int count,bool eraseWhenSent)
 {
-	sentVectors.push_back(message);
+	if (eraseWhenSent == true)
+	{
+		sentVectors.push_back(message);
+	}
 	sentMessageHandlers.push_back(cluster->send(destination,tag,message->data(),count,MPI_BYTE));
 }
 
@@ -206,13 +210,12 @@ void NonBlockingSendQueue<BufferType>::waitAndFreeVector()
 	for (int i = 0; i < sentMessageHandlers.size() ; i++)
 	{
 		cluster->waitForSend(sentMessageHandlers[i]);
-		
-		for (BufferType atom : (*sentVectors[i]))
-		{
-			delete atom;
-		}
-		sentVectors[i]->clear();
-		delete sentVectors[i];
+	}
+	
+	for (std::vector<BufferType>* vect : sentVectors)
+	{
+		vect->clear();
+		delete vect;
 	}
 	sentVectors.clear();
 	sentMessageHandlers.clear();
