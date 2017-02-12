@@ -44,9 +44,7 @@ class Cluster
 			@param datatype datatype (of type MPI_DATATYPE) of the atomic elements of the buffer 
 			@return A handle that can be used in the waitForSend function to wait for the message to be sent  
 		*/
-		MPI_Request* send(int destination,tags tag, const void *buf,int count,MPI_Datatype datatype);
-		//waits for the message associated with the handler passed as argument to be sent (received by other party)
-		void waitForSend(MPI_Request *request);
+		void send(int destination,tags tag, const void *buf,int count,MPI_Datatype datatype);
 		/**
 			A blocking call that waits until a message is received. It the allocates enough memory for it, saves it
 			in the allocated memory and returns the address of alocted memory. 
@@ -159,17 +157,7 @@ class NonBlockingSendQueue
 		*/
 		void send(int destination,const BufferType message,int count);
 		void sendVector(int destination,std::vector<BufferType>* message,int count,bool eraseWhenSent);
-		/**
-			blocking call thta waits for all the sent messages to finish and also 
-			deletes the buffer associated with them 
-			warning : the sent elements have to have been instantiated using the new keyword ! 
-		*/
-		void waitAndFree();
-		void waitAndFreeVector();
 	private :
-		std::vector<MPI_Request*> sentMessageHandlers;
-		std::vector<BufferType> sentMessages;
-		std::vector<std::vector<BufferType>* > sentVectors;
 		ClusterHandler cluster;
 		tags tag;	
 };
@@ -177,48 +165,20 @@ class NonBlockingSendQueue
 template <typename BufferType>
 void NonBlockingSendQueue<BufferType>::send(int destination,const BufferType message,int count)
 {
-	sentMessages.push_back(message);
-	sentMessageHandlers.push_back(cluster->send(destination,tag,(void *)message ,count,MPI_BYTE));
+	cluster->send(destination,tag,(void *)message ,count,MPI_BYTE);
+	delete message;
 }
 
 template <typename BufferType>
 void NonBlockingSendQueue<BufferType>::sendVector(	int destination,std::vector<BufferType>* message,
 													int count,bool eraseWhenSent)
 {
+	cluster->send(destination,tag,message->data(),count,MPI_BYTE);
 	if (eraseWhenSent == true)
 	{
-		sentVectors.push_back(message);
+		message->clear();
+		delete message;
 	}
-	sentMessageHandlers.push_back(cluster->send(destination,tag,message->data(),count,MPI_BYTE));
-}
-
-template <typename BufferType>
-void NonBlockingSendQueue<BufferType>::waitAndFree()
-{
-	for (int i = 0; i < sentMessageHandlers.size() ; i++)
-	{
-		cluster->waitForSend(sentMessageHandlers[i]);
-	}
-	sentMessages.clear();
-	sentMessageHandlers.clear();
-}
-
-template <typename BufferType>
-void NonBlockingSendQueue<BufferType>::waitAndFreeVector()
-{
-	for (int i = 0; i < sentMessageHandlers.size() ; i++)
-	{
-		cluster->waitForSend(sentMessageHandlers[i]);
-	}
-	
-	for (std::vector<BufferType>* vect : sentVectors)
-	{
-		vect->clear();
-		delete vect;
-	}
-	sentVectors.clear();
-	sentMessageHandlers.clear();
-	
 }
 
 

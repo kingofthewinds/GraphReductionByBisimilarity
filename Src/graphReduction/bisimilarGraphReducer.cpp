@@ -22,28 +22,29 @@ void BisimilarGraphReducer::runAlgorithm()
 	
 	while(true)
 	{
-		cout << "node "<< cluster->getrankOfCurrentNode() << " began algorithm ! " << endl;
+		cout << "node "<< cluster->getrankOfCurrentNode() << " started running the algorithm ! " << endl;
 		
 		generateSignatures();//generate their signature 
 		cluster->waitForOtherClusterNodes();
 		cout << "node "<< cluster->getrankOfCurrentNode() << " calculated it's signatures !" << endl;
 		numberOfExpectedAnswers = 0;
 		createThreadToSendSignaturesAndHandleMessages();
-		cout << "node "<< cluster->getrankOfCurrentNode() << " did the communications ! " << endl;
+		cout << "node "<< cluster->getrankOfCurrentNode() << " finished internode communication ! " << endl;
 		int oldCount = newCount;
 		cluster->waitForOtherClusterNodes();
 		newCount = cluster->sumAllClusterNodeValues(myNewCount);
-		cout << "the new count is : " << newCount << endl ;
+		cout << "current number of partitions : " << newCount << endl ;
 		if (oldCount == newCount)
 		{
 			break;
 		}
 		cluster->waitForOtherClusterNodes();
-		cout << "node "<< cluster->getrankOfCurrentNode() << " started updating IDs ! " << endl;
 		updateIDs();
+		cout << "node "<< cluster->getrankOfCurrentNode() << " updated it's IDs !" << endl;
 		cluster->waitForOtherClusterNodes();
+		cout << "----------------------------------------------------------------------------" << endl;
 	}
-	//printIDs();
+	printIDs();
 }
 
 
@@ -119,30 +120,16 @@ void BisimilarGraphReducer::createThreadToSendSignaturesAndHandleMessages()
 }
 
 void BisimilarGraphReducer::sendSignatures()
-{
-	cout << "node "<< cluster->getrankOfCurrentNode() << " started sending signatures !" << endl;
-	
+{	
 	NonBlockingSendQueue< Signature > signaturesQueue(cluster,HASH_INSERT);
-	int unittest = 0;
 	for (map<nodeType,nodeInfo>::iterator it = s.begin() ; it != s.end() ; it++)
 	{
 		vector<Signature>* sig = it->second.signature;
 		int clusterToSendTo = hashSignature(*sig);
 		sig->push_back(Signature{0,it->first});
 		signaturesQueue.sendVector(clusterToSendTo, sig, ((*sig).size())*sizeof(Signature), false);
-		if (unittest % 100000 == 0 )
-		{
-			signaturesQueue.waitAndFreeVector();
-			cout << "node "<< cluster->getrankOfCurrentNode() << " sent " << unittest << endl;
-		}
-		unittest++;
 	}
-	cout << "node "<< cluster->getrankOfCurrentNode() << " finished sending sigs !" << endl;
-
-	signaturesQueue.waitAndFreeVector();
 	cluster->sendSignalToAllClusterNodes(END_SIG);
-	cout << "node "<< cluster->getrankOfCurrentNode() << " sent sigs and others received !" << endl;
-
 }
 
 int BisimilarGraphReducer::hashSignature(vector<Signature>& signature)
@@ -197,18 +184,11 @@ void BisimilarGraphReducer::handleMessages()
 	tags tag = OUT;
 	int count = 0;
 	int source = 0;
-	int testcount = 0;
 	while (numberOfActiveWorkers > 0 || numberOfExpectedAnswers > 0)
 	{
 		unsigned char* data = cluster->receive(MPI_BYTE, &count, &source, (int *)&tag);
 		if (tag == HASH_INSERT)
 		{
-			if (testcount % 100000 == 0)
-			{
-				cout << "node "<< cluster->getrankOfCurrentNode() << " received " << testcount << endl; 
-				idResponseQueue.waitAndFree();
-			}
-			testcount++;
 			int blockNumberToReturnToTheSender = 0;
 			Signature* sigs = (Signature*)data;
 			vector<Signature>* signatureToInsert = new vector<Signature>(sigs,sigs+count/(sizeof(Signature)));
@@ -226,10 +206,6 @@ void BisimilarGraphReducer::handleMessages()
 				blockNumberToReturnToTheSender = currentNumberOfBlocks;
 				currentNumberOfBlocks += 100;
 			}	
-			if (blockNumberToReturnToTheSender < 0 )
-			{
-				cerr << "node " << cluster->getrankOfCurrentNode() << " negative value !" << endl;
-			}
 			SignatureAnswer* answer = new SignatureAnswer;
 			answer->node = node;
 			answer->blockID = blockNumberToReturnToTheSender;
@@ -249,7 +225,6 @@ void BisimilarGraphReducer::handleMessages()
 			delete[] data;
 		}
 	}
-	idResponseQueue.waitAndFree();
 	myNewCount = H.size();
 }
 
@@ -295,7 +270,6 @@ void BisimilarGraphReducer::updateIDs()
 void BisimilarGraphReducer::sendNewIDs()
 {
 	NonBlockingSendQueue< blockType > inSendQueue(cluster,UPDATE);
-	int testUnit = 0;
 	for (int j = 0 ; j < cluster->getNumberOfNodes() ; j++)
 	{
 		vector<In*> inj = in[j];
@@ -303,17 +277,9 @@ void BisimilarGraphReducer::sendNewIDs()
 		for (auto in : inj)//for all the In's going to j
 		{
 			toBeSent->push_back(s[in->dest].id);
-			
-			if (testUnit % 100000 == 0)
-			{
-				cout << "node : "<< cluster->getrankOfCurrentNode() << " updated : " << testUnit << endl;
-			}		
-			testUnit++;	
 		} 
 		inSendQueue.sendVector(j, toBeSent, (toBeSent->size())*sizeof(blockType), true);
 	}
-	inSendQueue.waitAndFreeVector();
-	cout << "out of the queue" << endl;
 }
 
 void BisimilarGraphReducer::receiveIDs()

@@ -17,20 +17,12 @@ Cluster::Cluster()
 	MPI_Comm_rank(MPI_COMM_WORLD, &rankOfCurrentNode);
 }
 
-//A non-blocking send 
+//A blocking send 
 //dataSize is the total size of the data (if a vactor then vector * size of each element)
-MPI_Request* Cluster::send(int destination,tags tag, const void *buf,int dataSize,MPI_Datatype datatype)
+void Cluster::send(int destination,tags tag, const void *buf,int dataSize,MPI_Datatype datatype)
 {
-	MPI_Request* request = new MPI_Request;
-	//MPI_Isend(buf , dataSize , datatype, destination , tag, MPI_COMM_WORLD,request);
+	//MPI_Send(buf , dataSize , datatype, destination , tag, MPI_COMM_WORLD,request);
 	MPI_Send(buf , dataSize , datatype, destination , tag, MPI_COMM_WORLD);
-	return request;
-}
-
-//waits for a non-blocking send to finish 
-void Cluster::waitForSend(MPI_Request *request)
-{
-	//MPI_Wait(request, MPI_STATUS_IGNORE);
 }
 
 unsigned char* Cluster::receive(MPI_Datatype datatype, int* count, int* source, int* tag)
@@ -54,14 +46,9 @@ void Cluster::waitForOtherClusterNodes()
 
 void Cluster::sendSignalToAllClusterNodes(tags t)
 {
-	vector<MPI_Request*> sentSignals;
 	for (int i = 0 ; i < getNumberOfNodes() ; i++)
 	{
-		sentSignals.push_back(send(i,t, NULL,0,MPI_BYTE));
-	}
-	for (int i = 0; i < sentSignals.size() ; i++)
-	{
-		waitForSend(sentSignals[i]);
+		send(i,t, NULL,0,MPI_BYTE);
 	}
 }
 

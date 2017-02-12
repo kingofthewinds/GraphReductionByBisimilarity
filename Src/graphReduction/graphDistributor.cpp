@@ -24,7 +24,7 @@ void GraphDistributor::readAndDistributeGraph(string pathToFile)
 	cout << "just loaded the graph" << endl;
 	
 	
-	/*
+	/* a sample for testing purposes ! 
 	graph.push_back(edge{0,0,0,1});
 	graph.push_back(edge{0,0,1,2});
 	graph.push_back(edge{0,1,0,4});
