@@ -10,18 +10,8 @@ BisimilarGraphReducer::BisimilarGraphReducer(ClusterHandler& clusterHandler,std:
 	s(), H(BisimilarGraphReducer::compareSignatureVector) 
 {
 	std::set<nodeType> tempSet;//create a tempporary set to pass to the graph distributor 
-	GraphDistributor gd(cluster,path,out,in,tempSet); // distribute the graph 
-	//convert the temporary set to a vector because we need it's values elements not to change position anymore
-	//under any more circomstances and it is guaranteed by vectors : 
-	for (set<nodeType>::const_iterator i = tempSet.begin() ; i != tempSet.end() ; i++) 
-	{
-		s.push_back(*i);
-	}
-	
-	//set the size the signatures vector (it will keep a signature per node attributed to cluster node)
-	signatures.resize(s.size());
-	ID.resize(s.size());//same for the ID's vector 
-	for (auto id : ID) id = 0;//set the initial id's to zero 
+	GraphDistributor gd(cluster,path,out,in,s); // distribute the graph 
+
 	cluster->waitForOtherClusterNodes();//we wait for all nodes to get here before running the algorithm
 	runAlgorithm();
 }
@@ -32,61 +22,31 @@ void BisimilarGraphReducer::runAlgorithm()
 	
 	while(true)
 	{
-		for (int count = 0 ; count < s.size() ; count++)//for all nodes of the graph
-		{
-			vector<Signature>* sig = generateSignature(s[count]);//generate their signature 
-			delete signatures[count];
-			signatures[count] = sig;//save the generated signature
-		}
+		cout << "node "<< cluster->getrankOfCurrentNode() << " began algorithm ! " << endl;
+		
+		generateSignatures();//generate their signature 
+		cluster->waitForOtherClusterNodes();
+		cout << "node "<< cluster->getrankOfCurrentNode() << " calculated it's signatures !" << endl;
 		numberOfExpectedAnswers = 0;
 		createThreadToSendSignaturesAndHandleMessages();
+		cout << "node "<< cluster->getrankOfCurrentNode() << " did the communications ! " << endl;
 		int oldCount = newCount;
 		cluster->waitForOtherClusterNodes();
 		newCount = cluster->sumAllClusterNodeValues(myNewCount);
+		cout << "the new count is : " << newCount << endl ;
 		if (oldCount == newCount)
 		{
 			break;
 		}
 		cluster->waitForOtherClusterNodes();
+		cout << "node "<< cluster->getrankOfCurrentNode() << " started updating IDs ! " << endl;
 		updateIDs();
 		cluster->waitForOtherClusterNodes();
 	}
-	printIDs();
+	//printIDs();
 }
 
-void BisimilarGraphReducer::printOutVector()
-{
-	for (int j = 0 ; j < out.size() ; j++)
-	{
-		for (Out* k : out[j]) 
-		{
-			cout << "node "<< cluster->getrankOfCurrentNode() << " : " 
-				 << "\tOut(" << cluster->getrankOfCurrentNode() << "," << j << ") = (" 
-				 << k->source <<","<<k->edge <<"," <<k->destinationBlock<<")"<<endl;
-		}
-	}
-}
-void BisimilarGraphReducer::printInVector()
-{
-	for (int j = 0 ; j < in.size() ; j++)
-	{
-		for (In* k : in[j]) 
-		{
-			cout << "node "<< cluster->getrankOfCurrentNode() << " : " 
-				 << "\tIn(" << j << "," << cluster->getrankOfCurrentNode() << ") = (" 
-				 << k->dest << ")" <<endl;
-		}
-	}
-}
 
-void BisimilarGraphReducer::printAttributedNodes()
-{
-	for (int j = 0 ; j < s.size() ; j++)
-	{
-		cout << "node "<< cluster->getrankOfCurrentNode() << " : " 
-			 << "\thas graph node : " <<  s[j]<< endl;
-	}
-}
 
 bool BisimilarGraphReducer::compareSignature (const Signature& lhs, const Signature& rhs) 
 {
@@ -101,49 +61,33 @@ bool BisimilarGraphReducer::compareSignature (const Signature& lhs, const Signat
 	return false;
 }
 
-std::vector<Signature>* BisimilarGraphReducer::generateSignature(nodeType node)
+void BisimilarGraphReducer::generateSignatures()
 {
-	vector<Signature>* signature = new vector<Signature>;
-	
-	//we create a set that uses our signature compare function to order elements 
-	//the need for this ordering is to ease the comparison of signatures when inserting 
-	//them into the hash table 
-	bool(*sigCmp)(const Signature&,const Signature&) = BisimilarGraphReducer::compareSignature;
-	std::set<Signature,bool(*)(const Signature&,const Signature&)> sigSet (sigCmp);
-	
+	for (map<nodeType,nodeInfo>::iterator it = s.begin() ; it != s.end() ; it++)//for all nodes of the graph
+	{
+		it->second.signature->clear();
+		it->second.signature->reserve(5);
+	}
 	//compute signature 
 	for (auto oj : out)
 	{
 		for (auto o : oj)
 		{
-			if (o->source == node)//if we have an out with the source = the node signature of which were calculating 
-			{
-				sigSet.insert((struct Signature){o->edge,o->destinationBlock});
-			}
+			s[o->source].signature->push_back(Signature{o->edge,o->destinationBlock});
 		}
 	}
-	
-	//convert our set to a vector so that it will be saved contiguously and be able to be sent 
-	//using out cluster
-	for (set<Signature>::const_iterator i = sigSet.begin() ; i != sigSet.end() ; i++) 
+	bool(*sigCmp)(const Signature&,const Signature&) = BisimilarGraphReducer::compareSignature;
+	for (map<nodeType,nodeInfo>::iterator it = s.begin() ; it != s.end() ; it++)//for all nodes of the graph
 	{
-		signature->push_back(*i);
+		sort(it->second.signature->begin(), it->second.signature->end(), sigCmp);		
 	}
-	return signature;
 }
 
 /*
 	the following two functions are not members of this class, nevertheless, 
-	once calles they take this object as parameter and call one of these classes memeber
+	once called they take this object as parameter and call one of these classes memeber
 	functions (in the thread they are)
 */
-void* handleMessagesThreadFunction(void* arg)
-{
-	BisimilarGraphReducer* gr = (BisimilarGraphReducer*)arg;//the this variable was passed in 
-	gr->handleMessages();//call the handleMessages function in this new thread ! 
-	pthread_exit(NULL);
-}
-
 void* sendSignaturesThreadFunction(void* arg)
 {
 	BisimilarGraphReducer* gr = (BisimilarGraphReducer*)arg;
@@ -151,9 +95,16 @@ void* sendSignaturesThreadFunction(void* arg)
 	pthread_exit(NULL);
 }
 
+void* handleMessagesThreadFunction(void* arg)
+{
+	BisimilarGraphReducer* gr = (BisimilarGraphReducer*)arg;//the this variable was passed in 
+	gr->handleMessages();//call the handleMessages function in this new thread ! 
+	pthread_exit(NULL);
+}
+
 void BisimilarGraphReducer::createThreadToSendSignaturesAndHandleMessages()
 {	
-	numberOfExpectedAnswers = signatures.size();//we will wait for #nodes signature ID's to be sent back
+	numberOfExpectedAnswers = s.size();//we will wait for #nodes signature ID's to be sent back
 	//creating a thread for handling messages (see the algorithm) : 
 	pthread_t sendSignatureThread;
 	pthread_create(&sendSignatureThread, NULL, sendSignaturesThreadFunction, (void*)this);
@@ -169,15 +120,29 @@ void BisimilarGraphReducer::createThreadToSendSignaturesAndHandleMessages()
 
 void BisimilarGraphReducer::sendSignatures()
 {
-	NonBlockingSendQueue< Signature > signaturesQueue(cluster,HASH_INSERT);
+	cout << "node "<< cluster->getrankOfCurrentNode() << " started sending signatures !" << endl;
 	
-	for (vector<Signature>* sig : signatures)
+	NonBlockingSendQueue< Signature > signaturesQueue(cluster,HASH_INSERT);
+	int unittest = 0;
+	for (map<nodeType,nodeInfo>::iterator it = s.begin() ; it != s.end() ; it++)
 	{
+		vector<Signature>* sig = it->second.signature;
 		int clusterToSendTo = hashSignature(*sig);
+		sig->push_back(Signature{0,it->first});
 		signaturesQueue.sendVector(clusterToSendTo, sig, ((*sig).size())*sizeof(Signature), false);
+		if (unittest % 100000 == 0 )
+		{
+			signaturesQueue.waitAndFreeVector();
+			cout << "node "<< cluster->getrankOfCurrentNode() << " sent " << unittest << endl;
+		}
+		unittest++;
 	}
+	cout << "node "<< cluster->getrankOfCurrentNode() << " finished sending sigs !" << endl;
+
 	signaturesQueue.waitAndFreeVector();
 	cluster->sendSignalToAllClusterNodes(END_SIG);
+	cout << "node "<< cluster->getrankOfCurrentNode() << " sent sigs and others received !" << endl;
+
 }
 
 int BisimilarGraphReducer::hashSignature(vector<Signature>& signature)
@@ -185,7 +150,7 @@ int BisimilarGraphReducer::hashSignature(vector<Signature>& signature)
 	int hash = 0;
 	for (auto sig : signature)
 	{
-		hash += (int)(sig.a) + (int)(sig.p);//vectors with the same a and p will go to the same cluster ! 
+		hash += (int)(sig.a)%cluster->getNumberOfNodes() + (int)(sig.p)% cluster->getNumberOfNodes();
 	}
 	return (hash % (cluster->getNumberOfNodes()));
 }
@@ -227,96 +192,132 @@ void BisimilarGraphReducer::handleMessages()
 	int numberOfActiveWorkers = cluster->getNumberOfNodes();
 	int currentNumberOfBlocks = 0*100+cluster->getrankOfCurrentNode();//assuming we won't have a cluster of > 100 nodes!
 	
-	NonBlockingSendQueue<Signature> idResponseQueue(cluster,HASH_ID);
+	NonBlockingSendQueue<SignatureAnswer*> idResponseQueue(cluster,HASH_ID);
 	
 	tags tag = OUT;
 	int count = 0;
 	int source = 0;
+	int testcount = 0;
 	while (numberOfActiveWorkers > 0 || numberOfExpectedAnswers > 0)
 	{
 		unsigned char* data = cluster->receive(MPI_BYTE, &count, &source, (int *)&tag);
 		if (tag == HASH_INSERT)
 		{
+			if (testcount % 100000 == 0)
+			{
+				cout << "node "<< cluster->getrankOfCurrentNode() << " received " << testcount << endl; 
+				idResponseQueue.waitAndFree();
+			}
+			testcount++;
 			int blockNumberToReturnToTheSender = 0;
 			Signature* sigs = (Signature*)data;
-			//insert into hash map
 			vector<Signature>* signatureToInsert = new vector<Signature>(sigs,sigs+count/(sizeof(Signature)));
+			blockType node = ((*signatureToInsert)[signatureToInsert->size()-1]).p;
+			signatureToInsert->pop_back();
 			std::pair<std::map<std::vector<Signature>*,int>::iterator , bool> ret;
 			ret = H.insert( std::pair<std::vector<Signature>*,int>(signatureToInsert,currentNumberOfBlocks) );
 			if (ret.second == false) //signature already existed
 			{
 				blockNumberToReturnToTheSender = ret.first->second;
-				//for facility, we add the new signature as the last element of the signature we're sending back 
-				signatureToInsert->push_back( (struct Signature){'n',blockNumberToReturnToTheSender} );
-				idResponseQueue.sendVector(source,signatureToInsert,(signatureToInsert->size())*sizeof(Signature),true);
+				delete signatureToInsert;
+
 			}else
 			{
 				blockNumberToReturnToTheSender = currentNumberOfBlocks;
 				currentNumberOfBlocks += 100;
-				
-				vector<Signature>* signatureToSendBack = new vector<Signature>(sigs,sigs+count/(sizeof(Signature)));
-				signatureToSendBack->push_back( (struct Signature){'n',blockNumberToReturnToTheSender} );
-				idResponseQueue.sendVector(	source,signatureToSendBack, 
-											(signatureToSendBack->size())*sizeof(Signature),true);
-				
-			}			
+			}	
+			if (blockNumberToReturnToTheSender < 0 )
+			{
+				cerr << "node " << cluster->getrankOfCurrentNode() << " negative value !" << endl;
+			}
+			SignatureAnswer* answer = new SignatureAnswer;
+			answer->node = node;
+			answer->blockID = blockNumberToReturnToTheSender;
+			idResponseQueue.send(source,answer,sizeof(SignatureAnswer));
 			delete[] data; //delete the received data object which at this point has been converted to a vector 			
 		}else if (tag == END_SIG)
 		{
 			numberOfActiveWorkers--;
 		}else if (tag == HASH_ID)
 		{
-			Signature* sigs = (Signature*)data;
-			vector<Signature>* signatureToInsert = new vector<Signature>(sigs,sigs+count/(sizeof(Signature)));
-			//retrieve the last element of the signature which nontains the new id in it's p value 
-			blockType newID = ((*signatureToInsert)[(*signatureToInsert).size()-1]).p;
-			signatureToInsert->pop_back();//delete this now useless last element
-			
-			//search whithin all the signatures to find which one it is equal to 
-			for (int i = 0 ; i < signatures.size() ; i++)
-			{
-				if ( 
-					BisimilarGraphReducer::compareSignatureVector(signatures[i],signatureToInsert)
-					==
-					BisimilarGraphReducer::compareSignatureVector(signatureToInsert,signatures[i])  
-				)
-				{
-					ID[i] = newID;//set the id of the corresponding node 
-				}
-			}
-			delete signatureToInsert;
+			//clock_t begin = clock();
+			SignatureAnswer* siganswer = (SignatureAnswer*)data;
+			//cout << double(clock() - begin) / CLOCKS_PER_SEC  << " "  ;
+			s[siganswer->node].id = siganswer->blockID;
+			//cout << double(clock() - begin) / CLOCKS_PER_SEC  << " " << endl ;
 			numberOfExpectedAnswers--;
 			delete[] data;
 		}
 	}
-	idResponseQueue.waitAndFreeVector();
+	idResponseQueue.waitAndFree();
 	myNewCount = H.size();
 }
 
 void BisimilarGraphReducer::clearPartialHashTable()
 {
-	H.clear();
 	for (map<vector<Signature>*,int>::iterator it = H.begin(); it != H.end(); ++it)
 	{
 		delete it->first;
 	}
+	H.clear();
+}
+
+void* sendIDsThreadFunction(void* arg)
+{
+	BisimilarGraphReducer* gr = (BisimilarGraphReducer*)arg;
+	gr->sendNewIDs();
+	pthread_exit(NULL);
+}
+
+void* receiveIDsThreadFunction(void* arg)
+{
+	BisimilarGraphReducer* gr = (BisimilarGraphReducer*)arg;
+	gr->receiveIDs();
+	pthread_exit(NULL);
 }
 
 void BisimilarGraphReducer::updateIDs()
 {
+	
+	pthread_t sendIDs;
+	pthread_create(&sendIDs, NULL, sendIDsThreadFunction, (void*)this);
+	
+	pthread_t receiveIDs;
+	pthread_create(&receiveIDs, NULL, receiveIDsThreadFunction, (void*)this);
+	
+	//wait for both threads to finish before proceeding 
+	pthread_join(sendIDs, NULL);
+	pthread_join(receiveIDs, NULL);
+	
+	
+}
+
+void BisimilarGraphReducer::sendNewIDs()
+{
 	NonBlockingSendQueue< blockType > inSendQueue(cluster,UPDATE);
+	int testUnit = 0;
 	for (int j = 0 ; j < cluster->getNumberOfNodes() ; j++)
 	{
 		vector<In*> inj = in[j];
 		vector<blockType>* toBeSent = new vector<blockType>;
 		for (auto in : inj)//for all the In's going to j
 		{
-			int pos = find(s.begin(), s.end(), in->dest ) - s.begin();//if a node = destination of the in 
-			toBeSent->push_back(ID[pos]);//find it's new Id and send it 
+			toBeSent->push_back(s[in->dest].id);
+			
+			if (testUnit % 100000 == 0)
+			{
+				cout << "node : "<< cluster->getrankOfCurrentNode() << " updated : " << testUnit << endl;
+			}		
+			testUnit++;	
 		} 
 		inSendQueue.sendVector(j, toBeSent, (toBeSent->size())*sizeof(blockType), true);
 	}
-	
+	inSendQueue.waitAndFreeVector();
+	cout << "out of the queue" << endl;
+}
+
+void BisimilarGraphReducer::receiveIDs()
+{
 	int received = 0;
 	tags tag = OUT;
 	int count = 0;
@@ -337,14 +338,48 @@ void BisimilarGraphReducer::updateIDs()
 			received ++;	
 		}
 	}
-	inSendQueue.waitAndFreeVector();
 }
 
 void BisimilarGraphReducer::printIDs()
 {
-	for (int i = 0 ; i < s.size() ; i++)
+	for (map<nodeType,nodeInfo>::iterator it = s.begin() ; it != s.end() ; it++)//for all nodes of the graph
 	{
-		cout << s[i] << " --> " << ID[i] << endl;
+		cout << it->first << " --> " << it->second.id << endl;
+	}
+}
+
+
+void BisimilarGraphReducer::printOutVector()
+{
+	for (int j = 0 ; j < out.size() ; j++)
+	{
+		for (Out* k : out[j]) 
+		{
+			cout << "node "<< cluster->getrankOfCurrentNode() << " : " 
+				 << "\tOut(" << cluster->getrankOfCurrentNode() << "," << j << ") = (" 
+				 << k->source <<","<<k->edge <<"," <<k->destinationBlock<<")"<<endl;
+		}
+	}
+}
+void BisimilarGraphReducer::printInVector()
+{
+	for (int j = 0 ; j < in.size() ; j++)
+	{
+		for (In* k : in[j]) 
+		{
+			cout << "node "<< cluster->getrankOfCurrentNode() << " : " 
+				 << "\tIn(" << j << "," << cluster->getrankOfCurrentNode() << ") = (" 
+				 << k->dest << ")" <<endl;
+		}
+	}
+}
+
+void BisimilarGraphReducer::printAttributedNodes()
+{
+	for (map<nodeType,nodeInfo>::iterator it = s.begin() ; it != s.end() ; it++)//for all nodes of the graph
+	{
+		cout << "node "<< cluster->getrankOfCurrentNode() << " : " 
+		 << "\thas graph node : " <<  it->first << endl;
 	}
 }
 

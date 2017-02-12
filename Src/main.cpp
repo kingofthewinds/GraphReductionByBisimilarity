@@ -15,5 +15,5 @@ int main(int argc, char *argv[]) {
 	//create a BisimilarGraphReducer and pass to it the clusterhandler object and a string of the address 
 	//of the file that contains the graph that needs to be reduced. The algorithm of graph reduction will then 
 	//automatically be applied by the constructor of BisimilarGraphRedcuser
-	BisimilarGraphReducer bgr(cluster,"Undefined");
+	BisimilarGraphReducer bgr(cluster,"tpch.edge.hashed");
 }

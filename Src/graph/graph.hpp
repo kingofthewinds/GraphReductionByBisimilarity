@@ -1,13 +1,16 @@
 #ifndef GRAPH_PROTECT
 #define GRAPH_PROTECT
 
+#include <vector>
+
 typedef int nodeType;
-typedef char edgeType;
+typedef int edgeType;
 typedef int blockType;
 typedef int graphSize;
 
 struct edge 
 {
+	blockType sourceID;
 	nodeType source;
 	edgeType edge;
 	nodeType dest;
@@ -32,18 +35,18 @@ struct Signature
 	blockType p;
 };
 
-struct initOut
+struct nodeInfo
 {
-	nodeType source;
-	edgeType edge;
-	blockType destinationBlock;
-	int clusterDestinationNode; 
-};	
-
-struct initIn
-{
-	nodeType dest;
-	int clusterSourceNode;
+	blockType id;
+	std::vector<Signature>* signature;
 };
+
+struct SignatureAnswer
+{
+	nodeType node;
+	blockType blockID;
+};
+
+
 
 #endif

@@ -22,14 +22,15 @@ Cluster::Cluster()
 MPI_Request* Cluster::send(int destination,tags tag, const void *buf,int dataSize,MPI_Datatype datatype)
 {
 	MPI_Request* request = new MPI_Request;
-	MPI_Isend(buf , dataSize , datatype, destination , tag, MPI_COMM_WORLD,request);
+	//MPI_Isend(buf , dataSize , datatype, destination , tag, MPI_COMM_WORLD,request);
+	MPI_Send(buf , dataSize , datatype, destination , tag, MPI_COMM_WORLD);
 	return request;
 }
 
 //waits for a non-blocking send to finish 
 void Cluster::waitForSend(MPI_Request *request)
 {
-	MPI_Wait(request, MPI_STATUS_IGNORE);
+	//MPI_Wait(request, MPI_STATUS_IGNORE);
 }
 
 unsigned char* Cluster::receive(MPI_Datatype datatype, int* count, int* source, int* tag)
@@ -73,6 +74,7 @@ int Cluster::sumAllClusterNodeValues(int myValue)
 	{
 		sum += receivedValues[i];
 	}
+	delete[] receivedValues;
 	return sum;
 }
 

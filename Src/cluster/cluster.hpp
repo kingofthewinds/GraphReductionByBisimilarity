@@ -62,7 +62,7 @@ class Cluster
 			whenever this call is made by one of the nodes of the culuster, the call will block until 
 			all the other nodes of the custer make the same call. 
 			main usage : cluster nodes wait for eachother until they are all in the same step of the code 
-				-->node synchrinisation
+				-->node synchronisation
 		*/
 		void waitForOtherClusterNodes();
 		//sends a given tag to all the cluster nodes (without any message attached to it)
@@ -198,7 +198,6 @@ void NonBlockingSendQueue<BufferType>::waitAndFree()
 	for (int i = 0; i < sentMessageHandlers.size() ; i++)
 	{
 		cluster->waitForSend(sentMessageHandlers[i]);
-		delete sentMessages[i];
 	}
 	sentMessages.clear();
 	sentMessageHandlers.clear();

@@ -29,6 +29,10 @@ class BisimilarGraphReducer
 			handles signature insertion messages and stores results 
 		*/
 		void handleMessages();
+		
+		void sendNewIDs();
+		void receiveIDs();
+		
 	private :
 		
 		/**
@@ -54,7 +58,7 @@ class BisimilarGraphReducer
 		/**
 			generates the signature of a given node 
 		*/
-		std::vector<Signature>* generateSignature(nodeType node);
+		void generateSignatures();
 		
 		/**
 			compares two signature elements (used in a set as the comparison predicate)
@@ -101,9 +105,7 @@ class BisimilarGraphReducer
 		ClusterHandler cluster;
 		std::vector< std::vector<Out*> > out; 
 		std::vector< std::vector<In*>  > in;
-		std::vector<nodeType> s;
-		std::vector< std::vector<Signature>* > signatures;
-		std::vector<blockType> ID;
+		std::map<nodeType,nodeInfo> s;
 		int numberOfExpectedAnswers;
 		std::map<std::vector<Signature>*,int,bool(*)(const std::vector<Signature>*,const std::vector<Signature>*)> H;
 		int myNewCount;
