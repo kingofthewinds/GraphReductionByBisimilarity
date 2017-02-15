@@ -22,7 +22,7 @@ void BisimilarGraphReducer::runAlgorithm()
 	
 	while(true)
 	{
-		cout << "node "<< cluster->getrankOfCurrentNode() << " started running the algorithm ! " << endl;
+		cout << "node "<< cluster->getrankOfCurrentNode() << " new round of the algorithm ! " << endl;
 		
 		generateSignatures();//generate their signature 
 		cluster->waitForOtherClusterNodes();
@@ -44,7 +44,7 @@ void BisimilarGraphReducer::runAlgorithm()
 		cluster->waitForOtherClusterNodes();
 		cout << "----------------------------------------------------------------------------" << endl;
 	}
-	//printIDs();
+	printIDs();
 }
 
 

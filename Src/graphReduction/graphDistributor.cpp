@@ -7,7 +7,7 @@ void GraphDistributor::readAndDistributeGraph(string pathToFile)
 {
 	vector<edge> graph;
 	
-	
+	/*
 	ifstream file(pathToFile);
 	string line;
 	while(std::getline(file, line))
@@ -22,10 +22,10 @@ void GraphDistributor::readAndDistributeGraph(string pathToFile)
 
 	}
 	cout << "just loaded the graph" << endl;
-	
+	*/
 	
 	// a sample for testing purposes ! 
-	/*
+	
 	graph.push_back(edge{0,0,0,1});
 	graph.push_back(edge{0,0,1,2});
 	graph.push_back(edge{0,1,0,4});
@@ -36,7 +36,7 @@ void GraphDistributor::readAndDistributeGraph(string pathToFile)
 	graph.push_back(edge{0,3,0,6});
 	graph.push_back(edge{5,5,1,7});
 	graph.push_back(edge{6,6,1,7});
-	*/
+	
 	
 	cout << "total number of records in the graph : " <<graph.size() << endl;
 	unordered_map<nodeType,blockType> initialIDs;
