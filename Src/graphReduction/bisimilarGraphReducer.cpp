@@ -44,7 +44,7 @@ void BisimilarGraphReducer::runAlgorithm()
 		cluster->waitForOtherClusterNodes();
 		cout << "----------------------------------------------------------------------------" << endl;
 	}
-	printIDs();
+	//printIDs();
 }
 
 
@@ -192,7 +192,7 @@ void BisimilarGraphReducer::handleMessages()
 			int blockNumberToReturnToTheSender = 0;
 			Signature* sigs = (Signature*)data;
 			vector<Signature>* signatureToInsert = new vector<Signature>(sigs,sigs+count/(sizeof(Signature)));
-			blockType node = ((*signatureToInsert)[signatureToInsert->size()-1]).p;
+			blockType node = ((*signatureToInsert)[signatureToInsert->size()-1]).p; 
 			signatureToInsert->pop_back();
 			std::pair<std::map<std::vector<Signature>*,int>::iterator , bool> ret;
 			ret = H.insert( std::pair<std::vector<Signature>*,int>(signatureToInsert,currentNumberOfBlocks) );
