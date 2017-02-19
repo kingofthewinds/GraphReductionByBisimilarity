@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include "../graph/graph.hpp"
 #include <vector>
+#include "../graphReduction/profiler.hpp"
 
 //enumeration of the possible (not complete) message tags that can be sent 
 enum tags 
@@ -28,7 +29,7 @@ class Cluster
 {
 	public :
 		//initializez a multiple-thread cluster
-		Cluster();
+		Cluster(Profiler& profiler);
 		//returns the total number of nodes contained in the cluster 
 		int getNumberOfNodes(){return numberOfNodes;}
 		//returns the rank (=ID (starting at zero)) of the cluster node calling the function
@@ -73,11 +74,15 @@ class Cluster
 			warning : all the nodes shoud make the call at the same type --> some synchrinissation needed
 		*/
 		int sumAllClusterNodeValues(int myValue);
+		
+		void closeCluster();
 	private : 
 		//the total number of nodes in the cluster 
 		int numberOfNodes;
 		//the rank(Identifier) of the current node  
 		int rankOfCurrentNode;
+		
+		Profiler& profiler;
 };
 
 

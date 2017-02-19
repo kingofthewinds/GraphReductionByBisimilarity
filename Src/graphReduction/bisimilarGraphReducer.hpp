@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include "graphDistributor.hpp"
+#include "profiler.hpp"
 #include "../cluster/cluster.hpp"
 #include <pthread.h>
 #include <map>
@@ -17,7 +18,7 @@ class BisimilarGraphReducer
 			@param clusterHandler the cluster handler object
 			@param path the path to the file  
 		*/
-		BisimilarGraphReducer(ClusterHandler& clusterHandler, std::string path );
+		BisimilarGraphReducer(ClusterHandler& clusterHandler, std::string path, Profiler& profiler);
 		
 		/**
 			send the signatures of the nodes to the approppriate node so they can be inserted to 
@@ -109,6 +110,7 @@ class BisimilarGraphReducer
 		int numberOfExpectedAnswers;
 		std::map<std::vector<Signature>*,int,bool(*)(const std::vector<Signature>*,const std::vector<Signature>*)> H;
 		int myNewCount;
+		Profiler& profiler;
 };
 
 

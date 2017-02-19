@@ -2,12 +2,13 @@
 
 using namespace std;
 
-BisimilarGraphReducer::BisimilarGraphReducer(ClusterHandler& clusterHandler,std::string path):
+BisimilarGraphReducer::BisimilarGraphReducer(ClusterHandler& clusterHandler,std::string path, Profiler& profilerref):
 	cluster(clusterHandler),
 	//initialize the sizes of out and in vectors to the number of cluster nodes 
 	out(clusterHandler->getNumberOfNodes()), 
 	in(clusterHandler->getNumberOfNodes()),
-	s(), H(BisimilarGraphReducer::compareSignatureVector) 
+	s(), H(BisimilarGraphReducer::compareSignatureVector),
+	profiler(profilerref)
 {
 	std::set<nodeType> tempSet;//create a tempporary set to pass to the graph distributor 
 	GraphDistributor gd(cluster,path,out,in,s); // distribute the graph 
@@ -19,11 +20,10 @@ BisimilarGraphReducer::BisimilarGraphReducer(ClusterHandler& clusterHandler,std:
 void BisimilarGraphReducer::runAlgorithm()
 {
 	int newCount = 1;
-	
 	while(true)
 	{
+		profiler.roundStarted();
 		cout << "node "<< cluster->getrankOfCurrentNode() << " new round of the algorithm ! " << endl;
-		
 		generateSignatures();//generate their signature 
 		cluster->waitForOtherClusterNodes();
 		cout << "node "<< cluster->getrankOfCurrentNode() << " calculated it's signatures !" << endl;
@@ -33,9 +33,11 @@ void BisimilarGraphReducer::runAlgorithm()
 		int oldCount = newCount;
 		cluster->waitForOtherClusterNodes();
 		newCount = cluster->sumAllClusterNodeValues(myNewCount);
+		profiler.totalNumberOfPartitionsInThisRound(newCount);
 		cout << "current number of partitions : " << newCount << endl ;
 		if (oldCount == newCount)
 		{
+			profiler.roundFinished();
 			break;
 		}
 		cluster->waitForOtherClusterNodes();
@@ -43,8 +45,9 @@ void BisimilarGraphReducer::runAlgorithm()
 		cout << "node "<< cluster->getrankOfCurrentNode() << " updated it's IDs !" << endl;
 		cluster->waitForOtherClusterNodes();
 		cout << "----------------------------------------------------------------------------" << endl;
+		profiler.roundFinished();
 	}
-	printIDs();
+	//printIDs();
 }
 
 
@@ -226,6 +229,7 @@ void BisimilarGraphReducer::handleMessages()
 		}
 	}
 	myNewCount = H.size();
+	profiler.sizeOfThisNodesHashTable(myNewCount);
 }
 
 void BisimilarGraphReducer::clearPartialHashTable()

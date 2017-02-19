@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 
-Cluster::Cluster()
+Cluster::Cluster(Profiler& profilerref): profiler(profilerref)
 {
 	int provided;
 	MPI_Init_thread(NULL, NULL,MPI_THREAD_MULTIPLE, &provided);
@@ -23,6 +23,7 @@ void Cluster::send(int destination,tags tag, const void *buf,int dataSize,MPI_Da
 {
 	//MPI_Send(buf , dataSize , datatype, destination , tag, MPI_COMM_WORLD,request);
 	MPI_Send(buf , dataSize , datatype, destination , tag, MPI_COMM_WORLD);
+	profiler.bytesSent(dataSize);
 }
 
 unsigned char* Cluster::receive(MPI_Datatype datatype, int* count, int* source, int* tag)
@@ -35,6 +36,7 @@ unsigned char* Cluster::receive(MPI_Datatype datatype, int* count, int* source, 
 	unsigned char* data = new unsigned char[*count];
 	*source = status.MPI_SOURCE;
 	*tag = status.MPI_TAG;
+	profiler.bytesReceived(*count);
 	MPI_Recv((void*)data, *count, datatype, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	return data;
 }
@@ -63,6 +65,11 @@ int Cluster::sumAllClusterNodeValues(int myValue)
 	}
 	delete[] receivedValues;
 	return sum;
+}
+
+void Cluster::closeCluster()
+{
+	MPI_Finalize();
 }
 
 ClusterHandler& ClusterHandler::operator=(const ClusterHandler& rhs)
