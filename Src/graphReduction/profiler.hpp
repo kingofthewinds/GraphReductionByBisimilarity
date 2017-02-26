@@ -16,7 +16,9 @@ public:
 	void totalNumberOfPartitionsInThisRound(int numberOfPartitions);
 	void sizeOfThisNodesHashTable(int sizeOfHashtable);
 	void setRankAndNumberOfNodes(int rank, int numberOfNodes);
+	void addMemoryMeasure();
 	void printResults(std::ostream& output);
+	
 	
 	
 	
@@ -36,6 +38,8 @@ private:
 	
 	std::vector<int> totalNumberOfPartitionsPR;
 	std::vector<int> sizeOfHashTablePR;
+	
+	std::vector<std::string> memoryUsagePR;
 };
 
 

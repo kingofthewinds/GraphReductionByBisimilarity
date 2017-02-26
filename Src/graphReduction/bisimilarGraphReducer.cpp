@@ -34,6 +34,7 @@ void BisimilarGraphReducer::runAlgorithm()
 		cluster->waitForOtherClusterNodes();
 		newCount = cluster->sumAllClusterNodeValues(myNewCount);
 		profiler.totalNumberOfPartitionsInThisRound(newCount);
+		profiler.addMemoryMeasure();
 		cout << "current number of partitions : " << newCount << endl ;
 		if (oldCount == newCount)
 		{
