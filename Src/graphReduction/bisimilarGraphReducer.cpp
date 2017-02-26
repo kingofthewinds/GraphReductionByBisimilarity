@@ -65,13 +65,24 @@ bool BisimilarGraphReducer::compareSignature (const Signature& lhs, const Signat
 	return false;
 }
 
+bool BisimilarGraphReducer::compareSignatureEqual (const Signature& lhs, const Signature& rhs) 
+{
+	if (lhs.a == rhs.a && lhs.p == rhs.p)
+	{
+		return true;
+	}
+	return false;
+}
+
 void BisimilarGraphReducer::generateSignatures()
 {
+	/*
 	for (map<nodeType,nodeInfo>::iterator it = s.begin() ; it != s.end() ; it++)//for all nodes of the graph
 	{
 		it->second.signature->clear();
 		it->second.signature->reserve(5);
 	}
+	*/
 	//compute signature 
 	for (auto oj : out)
 	{
@@ -81,9 +92,12 @@ void BisimilarGraphReducer::generateSignatures()
 		}
 	}
 	bool(*sigCmp)(const Signature&,const Signature&) = BisimilarGraphReducer::compareSignature;
+	bool(*sigCmpEq)(const Signature&,const Signature&) = BisimilarGraphReducer::compareSignatureEqual;
 	for (map<nodeType,nodeInfo>::iterator it = s.begin() ; it != s.end() ; it++)//for all nodes of the graph
 	{
-		sort(it->second.signature->begin(), it->second.signature->end(), sigCmp);		
+		std::vector<Signature>& signature = *(it->second.signature);
+		sort(signature.begin(), signature.end(), sigCmp);
+		signature.erase( unique( signature.begin(), signature.end() , sigCmpEq ), signature.end() );
 	}
 }
 
@@ -131,6 +145,10 @@ void BisimilarGraphReducer::sendSignatures()
 		int clusterToSendTo = hashSignature(*sig);
 		sig->push_back(Signature{0,it->first});
 		signaturesQueue.sendVector(clusterToSendTo, sig, ((*sig).size())*sizeof(Signature), false);
+		
+		sig->clear();
+		//sig->reserve(5);
+
 	}
 	cluster->sendSignalToAllClusterNodes(END_SIG);
 }
@@ -315,6 +333,13 @@ void BisimilarGraphReducer::printIDs()
 	for (map<nodeType,nodeInfo>::iterator it = s.begin() ; it != s.end() ; it++)//for all nodes of the graph
 	{
 		cout << it->first << " --> " << it->second.id << endl;
+		//uncomment the following if you need it to print signatures  
+		/*
+		for (Signature i : (*it->second.signature))
+		{
+			cout << i.a << "," << i.p << endl;
+		}
+		*/
 	}
 }
 

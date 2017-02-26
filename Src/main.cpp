@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 	
 	profiler.endProfiling();
 	
-	string file = "Results/res-"+ std::to_string(cluster->getrankOfCurrentNode());
+	string file = "Results/res-"+ std::to_string(cluster->getrankOfCurrentNode()) + ".txt";
 	ofstream resfile(file.c_str());
 	profiler.printResults(resfile);
 	cluster->closeCluster();

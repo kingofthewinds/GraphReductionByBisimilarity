@@ -24,7 +24,20 @@ void GraphDistributor::readAndDistributeGraph(string pathToFile)
 	cout << "just loaded the graph" << endl;
 	
 	
-	// a sample for testing purposes ! 
+	// Two testing sets : 
+	
+	/*
+	graph.push_back(edge{0,1,0,2});
+	graph.push_back(edge{0,2,0,3});
+	graph.push_back(edge{0,3,0,1});
+	graph.push_back(edge{0,1,0,4});
+	graph.push_back(edge{0,2,0,4});
+	graph.push_back(edge{0,2,0,5});
+	graph.push_back(edge{0,3,0,5});
+	graph.push_back(edge{0,4,0,6});
+	graph.push_back(edge{0,5,0,6});
+	*/
+	
 	/*
 	graph.push_back(edge{0,0,0,1});
 	graph.push_back(edge{0,0,1,2});

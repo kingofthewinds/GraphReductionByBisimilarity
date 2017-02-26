@@ -66,6 +66,9 @@ class BisimilarGraphReducer
 		*/
 		static bool compareSignature (const Signature& lhs, const Signature& rhs);
 		
+		static bool compareSignatureEqual (const Signature& lhs, const Signature& rhs);
+
+		
 		/**
 			creates two threads that will ultimately call the sendSignatures and the handleMessages memeber functions 
 			on this object 
